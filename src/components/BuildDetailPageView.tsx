@@ -27,10 +27,13 @@ import { BrandLogo } from './BrandLogo';
 import { useToast } from './ToastProvider';
 import {
   ArrowLeft,
+  Briefcase,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Cpu,
+  ExternalLink,
+  Gamepad2,
   Gauge,
   HardDrive,
   Lock,
@@ -495,32 +498,168 @@ export function BuildDetailPageView({ slug }: BuildDetailPageViewProps) {
         {/* FPS Benchmarks */}
         {build.fps_benchmarks && build.fps_benchmarks.length > 0 && (
           <section className="space-y-4">
-            <div>
-              <p className="text-xs font-extrabold uppercase tracking-widest text-red-500">
-                Desempeño en Juegos
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-widest text-red-500 inline-flex items-center gap-1.5">
+                  <Gamepad2 className="w-3.5 h-3.5" /> Desempeño en Juegos
+                </p>
+                <h2 className="text-xl sm:text-2xl font-black text-white mt-0.5">
+                  Rendimiento Referencial (FPS)
+                </h2>
+              </div>
+              <p className="text-[11px] text-zinc-500">
+                Valores promedio aproximados según resolución y calidad gráfica
+                indicada.
               </p>
-              <h2 className="text-xl sm:text-2xl font-black text-white mt-0.5">
-                Rendimiento Referencial Estimado
-              </h2>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {build.fps_benchmarks.map((bm, idx) => (
-                <div
-                  key={`${bm.game}-${idx}`}
-                  className="rounded-2xl bg-zinc-950 border border-zinc-800 p-5 text-center space-y-1"
-                >
-                  <div className="text-xs font-bold text-zinc-300">
-                    {bm.game}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {build.fps_benchmarks.map((bm, idx) => {
+                const parsedNum =
+                  bm.fps_avg ??
+                  (parseInt((bm.fps || '').replace(/[^0-9]/g, ''), 10) || 0);
+                const barPct = Math.min(
+                  100,
+                  Math.max(12, Math.round((parsedNum / 240) * 100))
+                );
+                const tierTag =
+                  parsedNum >= 240
+                    ? 'Esports 240Hz+'
+                    : parsedNum >= 144
+                    ? 'Competitivo 144Hz+'
+                    : parsedNum >= 60
+                    ? 'Fluido 60+ FPS'
+                    : 'Jugable';
+
+                return (
+                  <div
+                    key={`${bm.game}-${idx}`}
+                    className="rounded-2xl bg-zinc-950 border border-zinc-800 p-4 flex flex-col justify-between gap-3"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="text-sm font-black text-white leading-tight">
+                          {bm.game}
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-300 whitespace-nowrap">
+                          {bm.resolution}
+                        </span>
+                      </div>
+
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-2xl font-black text-red-400">
+                          {bm.fps || (parsedNum ? `${parsedNum} FPS` : '—')}
+                        </span>
+                        {parsedNum > 0 && (
+                          <span className="text-[10px] font-bold text-zinc-400">
+                            {tierTag}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Fluency Bar */}
+                      <div className="h-1.5 w-full rounded-full bg-zinc-900 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-red-700 to-red-500"
+                          style={{ width: `${barPct}%` }}
+                        />
+                      </div>
+
+                      {bm.preset && (
+                        <div className="text-[11px] text-zinc-400">
+                          Calidad:{' '}
+                          <strong className="text-zinc-200">{bm.preset}</strong>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-zinc-900 flex items-center justify-between gap-2 text-[10px]">
+                      <span
+                        className={
+                          bm.source_type === 'WORKSHOP_TEST'
+                            ? 'text-emerald-400 font-bold'
+                            : 'text-zinc-500 font-semibold'
+                        }
+                      >
+                        {bm.source_type === 'WORKSHOP_TEST'
+                          ? 'Probado en taller CM GAMER'
+                          : 'Referencia verificada'}
+                      </span>
+
+                      {bm.source_url && (
+                        <a
+                          href={bm.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-red-400 hover:text-red-300 font-bold"
+                        >
+                          Ver prueba
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-2xl font-black text-red-400">
-                    {bm.fps}
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* High-Load Software & Productivity Workloads */}
+        {build.workloads && build.workloads.length > 0 && (
+          <section className="space-y-4">
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-widest text-red-500 inline-flex items-center gap-1.5">
+                <Briefcase className="w-3.5 h-3.5" /> Trabajo, Estudios y
+                Creación
+              </p>
+              <h2 className="text-xl sm:text-2xl font-black text-white mt-0.5">
+                Programas de Alta Carga Compatibles
+              </h2>
+              <p className="text-xs text-zinc-400 mt-1">
+                Además de gaming, esta configuración responde con solidez en
+                software profesional de diseño, arquitectura, 3D y edición.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {build.workloads.map((wl, idx) => {
+                const badgeClass =
+                  wl.level === 'PROFESIONAL'
+                    ? 'bg-red-600/20 text-red-300 border-red-500/40'
+                    : wl.level === 'FLUIDO'
+                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                    : 'bg-zinc-800 text-zinc-300 border-zinc-700';
+                const levelLabel =
+                  wl.level === 'PROFESIONAL'
+                    ? 'Nivel Profesional'
+                    : wl.level === 'FLUIDO'
+                    ? 'Rendimiento Fluido'
+                    : 'Uso Básico / Escolar';
+
+                return (
+                  <div
+                    key={`${wl.app}-${idx}`}
+                    className="rounded-2xl bg-zinc-950 border border-zinc-800 p-4 space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-black text-white">
+                        {wl.app}
+                      </h3>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border whitespace-nowrap ${badgeClass}`}
+                      >
+                        {levelLabel}
+                      </span>
+                    </div>
+                    {wl.note && (
+                      <p className="text-xs text-zinc-400 leading-relaxed">
+                        {wl.note}
+                      </p>
+                    )}
                   </div>
-                  <div className="text-[11px] text-zinc-500">
-                    {bm.resolution}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}

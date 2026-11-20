@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
+  BenchmarkSourceType,
   BuildTier,
   ComponentCategory,
   ComponentCondition,
@@ -11,6 +12,8 @@ import {
   PcBuild,
   ServiceCategory,
   TechService,
+  WorkloadCapability,
+  WorkloadLevel,
 } from '@/types/store';
 import {
   BUILD_TIER_META,
@@ -117,10 +120,8 @@ const EMPTY_BUILD_FORM = {
     cooling: '',
     os: 'Windows 11 Pro + Drivers actualizados',
   },
-  fps_benchmarks: [
-    { game: 'Valorant', fps: '280+ FPS', resolution: '1080p' },
-    { game: 'Warzone', fps: '120+ FPS', resolution: '1080p' },
-  ] as FpsBenchmark[],
+  fps_benchmarks: [] as FpsBenchmark[],
+  workloads: [] as WorkloadCapability[],
   warranty_text: '6 meses de garantía directa CM GAMER en armado y componentes.',
   is_featured: false,
   is_active: true,
@@ -291,6 +292,7 @@ export function AdminInventoryView({
         os: b.specs.os || '',
       },
       fps_benchmarks: b.fps_benchmarks || [],
+      workloads: b.workloads || [],
       warranty_text: b.warranty_text,
       is_featured: b.is_featured,
       is_active: b.is_active,
@@ -1121,6 +1123,443 @@ export function AdminInventoryView({
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* FPS Benchmarks Editor with 1-Click Research Shortcuts */}
+              <div className="pt-3 border-t border-zinc-800 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-red-400">
+                      Rendimiento en Juegos (FPS con Fundamento)
+                    </h4>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">
+                      Investiga el combo CPU + GPU en 1 clic y registra FPS
+                      reales con resolución, calidad y enlace opcional de
+                      respaldo.
+                    </p>
+                  </div>
+
+                  {/* 1-Click Research Links */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <a
+                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+                        `${buildForm.specs.cpu || 'Ryzen'} ${
+                          buildForm.specs.gpu || 'RTX'
+                        } gaming benchmark`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600/15 hover:bg-red-600/25 border border-red-500/40 text-[10px] font-bold text-red-300"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      YouTube Benchmark
+                    </a>
+                    <a
+                      href="https://howmanyfps.com/games"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-[10px] font-bold text-zinc-300"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      HowManyFPS
+                    </a>
+                    <a
+                      href="https://www.techpowerup.com/gpu-specs/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-[10px] font-bold text-zinc-300"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      TechPowerUp
+                    </a>
+                  </div>
+                </div>
+
+                {/* Quick-add popular games */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] text-zinc-500 font-semibold">
+                    Agregar rápido:
+                  </span>
+                  {[
+                    'Valorant',
+                    'CS2',
+                    'Fortnite',
+                    'Warzone',
+                    'Cyberpunk 2077',
+                    'GTA V',
+                    'Apex Legends',
+                  ].map((game) => (
+                    <button
+                      key={game}
+                      type="button"
+                      onClick={() =>
+                        setBuildForm((prev) => ({
+                          ...prev,
+                          fps_benchmarks: [
+                            ...prev.fps_benchmarks,
+                            {
+                              game,
+                              fps: '120 FPS',
+                              fps_avg: 120,
+                              resolution: '1080p',
+                              preset: 'Alto',
+                              source_type: 'EXTERNAL_REF',
+                              source_url: '',
+                            },
+                          ],
+                        }))
+                      }
+                      className="px-2 py-0.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[10px] font-bold text-zinc-300"
+                    >
+                      + {game}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBuildForm((prev) => ({
+                        ...prev,
+                        fps_benchmarks: [
+                          ...prev.fps_benchmarks,
+                          {
+                            game: '',
+                            fps: '',
+                            fps_avg: 100,
+                            resolution: '1080p',
+                            preset: 'Alto',
+                            source_type: 'EXTERNAL_REF',
+                            source_url: '',
+                          },
+                        ],
+                      }))
+                    }
+                    className="px-2 py-0.5 rounded-md bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-[10px] font-bold text-red-300"
+                  >
+                    + Otro juego
+                  </button>
+                </div>
+
+                {buildForm.fps_benchmarks.length > 0 && (
+                  <div className="space-y-2">
+                    {buildForm.fps_benchmarks.map((bm, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 space-y-2"
+                      >
+                        <div className="grid grid-cols-2 sm:grid-cols-12 gap-2 items-center">
+                          <input
+                            type="text"
+                            placeholder="Juego"
+                            value={bm.game}
+                            onChange={(e) =>
+                              setBuildForm((prev) => ({
+                                ...prev,
+                                fps_benchmarks: prev.fps_benchmarks.map(
+                                  (item, i) =>
+                                    i === idx
+                                      ? { ...item, game: e.target.value }
+                                      : item
+                                ),
+                              }))
+                            }
+                            className="sm:col-span-4 rounded-lg bg-zinc-950 border border-zinc-700 px-2.5 py-1.5 text-white"
+                          />
+                          <input
+                            type="number"
+                            min={1}
+                            placeholder="FPS (ej: 145)"
+                            value={bm.fps_avg ?? ''}
+                            onChange={(e) => {
+                              const num = parseInt(e.target.value, 10) || 0;
+                              setBuildForm((prev) => ({
+                                ...prev,
+                                fps_benchmarks: prev.fps_benchmarks.map(
+                                  (item, i) =>
+                                    i === idx
+                                      ? {
+                                          ...item,
+                                          fps_avg: num,
+                                          fps: num > 0 ? `${num} FPS` : '',
+                                        }
+                                      : item
+                                ),
+                              }));
+                            }}
+                            className="sm:col-span-2 rounded-lg bg-zinc-950 border border-zinc-700 px-2.5 py-1.5 text-white"
+                          />
+                          <select
+                            value={bm.resolution}
+                            onChange={(e) =>
+                              setBuildForm((prev) => ({
+                                ...prev,
+                                fps_benchmarks: prev.fps_benchmarks.map(
+                                  (item, i) =>
+                                    i === idx
+                                      ? { ...item, resolution: e.target.value }
+                                      : item
+                                ),
+                              }))
+                            }
+                            className="sm:col-span-2 rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-white"
+                          >
+                            <option value="1080p">1080p</option>
+                            <option value="1440p">1440p</option>
+                            <option value="4K">4K</option>
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="Calidad (Alto / Ultra + DLSS)"
+                            value={bm.preset || ''}
+                            onChange={(e) =>
+                              setBuildForm((prev) => ({
+                                ...prev,
+                                fps_benchmarks: prev.fps_benchmarks.map(
+                                  (item, i) =>
+                                    i === idx
+                                      ? { ...item, preset: e.target.value }
+                                      : item
+                                ),
+                              }))
+                            }
+                            className="sm:col-span-3 rounded-lg bg-zinc-950 border border-zinc-700 px-2.5 py-1.5 text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setBuildForm((prev) => ({
+                                ...prev,
+                                fps_benchmarks: prev.fps_benchmarks.filter(
+                                  (_, i) => i !== idx
+                                ),
+                              }))
+                            }
+                            className="sm:col-span-1 p-1.5 rounded-lg bg-zinc-950 hover:bg-red-950 text-zinc-400 hover:text-red-400 justify-self-end"
+                            title="Quitar benchmark"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                          <select
+                            value={bm.source_type || 'EXTERNAL_REF'}
+                            onChange={(e) =>
+                              setBuildForm((prev) => ({
+                                ...prev,
+                                fps_benchmarks: prev.fps_benchmarks.map(
+                                  (item, i) =>
+                                    i === idx
+                                      ? {
+                                          ...item,
+                                          source_type: e.target
+                                            .value as BenchmarkSourceType,
+                                        }
+                                      : item
+                                ),
+                              }))
+                            }
+                            className="sm:col-span-4 rounded-lg bg-zinc-950 border border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-300"
+                          >
+                            <option value="EXTERNAL_REF">
+                              Origen: Referencia verificada
+                            </option>
+                            <option value="WORKSHOP_TEST">
+                              Origen: Probado en taller CM GAMER
+                            </option>
+                          </select>
+                          <input
+                            type="url"
+                            placeholder="Link opcional de respaldo (ej: video YouTube del benchmark)"
+                            value={bm.source_url || ''}
+                            onChange={(e) =>
+                              setBuildForm((prev) => ({
+                                ...prev,
+                                fps_benchmarks: prev.fps_benchmarks.map(
+                                  (item, i) =>
+                                    i === idx
+                                      ? { ...item, source_url: e.target.value }
+                                      : item
+                                ),
+                              }))
+                            }
+                            className="sm:col-span-8 rounded-lg bg-zinc-950 border border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-300 placeholder:text-zinc-600"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* High-Load Productivity Software Editor */}
+              <div className="pt-3 border-t border-zinc-800 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-red-400">
+                      Programas de Alta Carga y Productividad (AutoCAD, Blender,
+                      Edición)
+                    </h4>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">
+                      Indica qué software pesado corre bien en este equipo para
+                      clientes de arquitectura, diseño, 3D o edición.
+                    </p>
+                  </div>
+
+                  <a
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+                      `${buildForm.specs.cpu || 'Ryzen'} ${
+                        buildForm.specs.gpu || 'RTX'
+                      } Blender Premiere AutoCAD benchmark`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-[10px] font-bold text-zinc-300"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Buscar pruebas de software
+                  </a>
+                </div>
+
+                {/* Quick-add software pills */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] text-zinc-500 font-semibold">
+                    Agregar rápido:
+                  </span>
+                  {[
+                    'AutoCAD 2D / 3D',
+                    'Blender',
+                    'Adobe Premiere Pro',
+                    'Photoshop / Illustrator',
+                    'DaVinci Resolve',
+                    'Revit / SketchUp',
+                    'SolidWorks',
+                    'Streaming (OBS)',
+                  ].map((app) => (
+                    <button
+                      key={app}
+                      type="button"
+                      onClick={() =>
+                        setBuildForm((prev) => ({
+                          ...prev,
+                          workloads: [
+                            ...prev.workloads,
+                            {
+                              app,
+                              level: 'FLUIDO',
+                              note: '',
+                            },
+                          ],
+                        }))
+                      }
+                      className="px-2 py-0.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[10px] font-bold text-zinc-300"
+                    >
+                      + {app}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBuildForm((prev) => ({
+                        ...prev,
+                        workloads: [
+                          ...prev.workloads,
+                          { app: '', level: 'FLUIDO', note: '' },
+                        ],
+                      }))
+                    }
+                    className="px-2 py-0.5 rounded-md bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-[10px] font-bold text-red-300"
+                  >
+                    + Otro programa
+                  </button>
+                </div>
+
+                {buildForm.workloads.length > 0 && (
+                  <div className="space-y-2">
+                    {buildForm.workloads.map((wl, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 space-y-2"
+                      >
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                          <input
+                            type="text"
+                            placeholder="Programa (ej: AutoCAD 2D / 3D)"
+                            value={wl.app}
+                            onChange={(e) =>
+                              setBuildForm((prev) => ({
+                                ...prev,
+                                workloads: prev.workloads.map((item, i) =>
+                                  i === idx
+                                    ? { ...item, app: e.target.value }
+                                    : item
+                                ),
+                              }))
+                            }
+                            className="sm:col-span-6 rounded-lg bg-zinc-950 border border-zinc-700 px-2.5 py-1.5 text-white"
+                          />
+                          <select
+                            value={wl.level}
+                            onChange={(e) =>
+                              setBuildForm((prev) => ({
+                                ...prev,
+                                workloads: prev.workloads.map((item, i) =>
+                                  i === idx
+                                    ? {
+                                        ...item,
+                                        level: e.target.value as WorkloadLevel,
+                                      }
+                                    : item
+                                ),
+                              }))
+                            }
+                            className="sm:col-span-5 rounded-lg bg-zinc-950 border border-zinc-700 px-2.5 py-1.5 text-white"
+                          >
+                            <option value="BASICO">
+                              Nivel: Básico / Escolar
+                            </option>
+                            <option value="FLUIDO">
+                              Nivel: Rendimiento Fluido
+                            </option>
+                            <option value="PROFESIONAL">
+                              Nivel: Profesional / Pesado
+                            </option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setBuildForm((prev) => ({
+                                ...prev,
+                                workloads: prev.workloads.filter(
+                                  (_, i) => i !== idx
+                                ),
+                              }))
+                            }
+                            className="sm:col-span-1 p-1.5 rounded-lg bg-zinc-950 hover:bg-red-950 text-zinc-400 hover:text-red-400 justify-self-end"
+                            title="Quitar programa"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Explicación breve (ej: Aceleración RTX OptiX para renders 3D rápidos)"
+                          value={wl.note}
+                          onChange={(e) =>
+                            setBuildForm((prev) => ({
+                              ...prev,
+                              workloads: prev.workloads.map((item, i) =>
+                                i === idx
+                                  ? { ...item, note: e.target.value }
+                                  : item
+                              ),
+                            }))
+                          }
+                          className="w-full rounded-lg bg-zinc-950 border border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-300 placeholder:text-zinc-600"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-5 pt-2">

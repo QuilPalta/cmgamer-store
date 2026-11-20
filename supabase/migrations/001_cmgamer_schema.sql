@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS public.pc_builds (
   short_description text NOT NULL DEFAULT '',
   specs jsonb NOT NULL DEFAULT '{}'::jsonb,
   fps_benchmarks jsonb NOT NULL DEFAULT '[]'::jsonb,
+  workloads jsonb NOT NULL DEFAULT '[]'::jsonb,
   warranty_text text NOT NULL DEFAULT '6 meses de garantía directa en armado y componentes.',
   is_featured boolean NOT NULL DEFAULT false,
   is_active boolean NOT NULL DEFAULT true,

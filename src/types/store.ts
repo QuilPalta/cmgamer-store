@@ -92,10 +92,24 @@ export interface BuildSpecs {
   os?: string;
 }
 
+export type BenchmarkSourceType = 'WORKSHOP_TEST' | 'EXTERNAL_REF';
+
 export interface FpsBenchmark {
   game: string;
   fps: string;
+  fps_avg?: number;
   resolution: string;
+  preset?: string;
+  source_type?: BenchmarkSourceType;
+  source_url?: string;
+}
+
+export type WorkloadLevel = 'BASICO' | 'FLUIDO' | 'PROFESIONAL';
+
+export interface WorkloadCapability {
+  app: string;
+  level: WorkloadLevel;
+  note: string;
 }
 
 export interface PcBuild {
@@ -112,6 +126,7 @@ export interface PcBuild {
   short_description: string;
   specs: BuildSpecs;
   fps_benchmarks: FpsBenchmark[];
+  workloads?: WorkloadCapability[];
   warranty_text: string;
   is_featured: boolean;
   is_active: boolean;
