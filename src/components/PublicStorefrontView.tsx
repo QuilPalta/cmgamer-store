@@ -14,7 +14,6 @@ import {
 } from '@/types/store';
 import {
   BUILD_TIER_META,
-  buildBuyerInquiryWhatsAppUrl,
   buildBuyerOrderWhatsAppUrl,
   buildServiceWhatsAppUrl,
   cleanWhatsAppPhone,
@@ -69,9 +68,6 @@ export function PublicStorefrontView() {
 
   // Banner carousel
   const [bannerIdx, setBannerIdx] = useState(0);
-
-  // Detail modal
-  const [selectedBuild, setSelectedBuild] = useState<PcBuild | null>(null);
 
   // Cart & Checkout
   const [cart, setCart] = useState<CartEntry[]>([]);
@@ -589,7 +585,10 @@ export function PublicStorefrontView() {
                     className="group rounded-2xl border border-zinc-800 hover:border-red-600/60 bg-zinc-950 overflow-hidden flex flex-col transition-all duration-200 shadow-lg hover:shadow-red-950/20"
                   >
                     {/* Image Header */}
-                    <div className="relative h-56 bg-zinc-900 overflow-hidden">
+                    <Link
+                      href={`/builds/${build.slug}`}
+                      className="relative h-56 bg-zinc-900 overflow-hidden block"
+                    >
                       {build.image_url ? (
                         <img
                           src={build.image_url}
@@ -625,15 +624,24 @@ export function PublicStorefrontView() {
                           </span>
                         )}
                       </div>
-                    </div>
+
+                      {(build.gallery_urls?.length || 0) > 0 && (
+                        <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-full bg-black/75 border border-zinc-700 text-[10px] font-bold text-zinc-200">
+                          +{build.gallery_urls.length} fotos
+                        </div>
+                      )}
+                    </Link>
 
                     {/* Content */}
                     <div className="p-5 flex-1 flex flex-col justify-between gap-4">
                       <div className="space-y-3">
                         <div>
-                          <h3 className="text-lg font-black text-white tracking-tight">
+                          <Link
+                            href={`/builds/${build.slug}`}
+                            className="text-lg font-black text-white hover:text-red-400 transition-colors tracking-tight block"
+                          >
                             {build.name}
-                          </h3>
+                          </Link>
                           <p className="text-xs text-zinc-400 mt-1 line-clamp-2 leading-relaxed">
                             {build.short_description}
                           </p>
@@ -674,13 +682,12 @@ export function PublicStorefrontView() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedBuild(build)}
-                            className="py-2.5 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-bold text-zinc-100 transition-colors"
+                          <Link
+                            href={`/builds/${build.slug}`}
+                            className="py-2.5 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-bold text-zinc-100 transition-colors inline-flex items-center justify-center"
                           >
-                            Ver Ficha
-                          </button>
+                            Ver PC
+                          </Link>
                           <button
                             type="button"
                             disabled={isOutOfStock}
@@ -861,169 +868,6 @@ export function PublicStorefrontView() {
           </div>
         </div>
       </footer>
-
-      {/* BUILD DETAIL MODAL (Fixed Specs Only — No Customization Mention) */}
-      {selectedBuild && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="w-full max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-              <div className="flex items-center gap-2.5">
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
-                    BUILD_TIER_META[selectedBuild.tier].badgeClass
-                  }`}
-                >
-                  {BUILD_TIER_META[selectedBuild.tier].label}
-                </span>
-                <h3 className="text-lg font-black text-white">
-                  {selectedBuild.name}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedBuild(null)}
-                className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 h-60 md:h-auto">
-                  {selectedBuild.image_url ? (
-                    <img
-                      src={selectedBuild.image_url}
-                      alt={selectedBuild.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-700">
-                      <Monitor className="w-12 h-12" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col justify-between gap-4">
-                  <div className="space-y-3">
-                    <p className="text-xs text-zinc-300 leading-relaxed">
-                      {selectedBuild.short_description}
-                    </p>
-                    <div className="rounded-xl bg-zinc-900/80 border border-zinc-800 p-4 space-y-1">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                        Precio Fijo (Transferencia)
-                      </span>
-                      <div className="text-3xl font-black text-white">
-                        {formatClp(selectedBuild.price_clp)}
-                      </div>
-                      <p className="text-[11px] text-zinc-400">
-                        {selectedBuild.warranty_text}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      disabled={
-                        selectedBuild.stock_quantity -
-                          selectedBuild.reserved_quantity <=
-                        0
-                      }
-                      onClick={() => {
-                        addBuildToCart(selectedBuild);
-                        setSelectedBuild(null);
-                      }}
-                      className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white text-sm font-bold transition-colors inline-flex items-center justify-center gap-2"
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                      {selectedBuild.stock_quantity -
-                        selectedBuild.reserved_quantity <=
-                      0
-                        ? 'Sin Stock Disponible'
-                        : 'Reservar esta Build'}
-                    </button>
-                    <a
-                      href={buildBuyerInquiryWhatsAppUrl(
-                        snapshot.settings,
-                        selectedBuild
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-bold transition-colors inline-flex items-center justify-center gap-2"
-                    >
-                      <MessageCircle className="w-4 h-4 text-red-500" />
-                      Consultar por WhatsApp
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              {/* Complete Specs Table */}
-              <div className="space-y-2.5">
-                <h4 className="text-xs font-extrabold uppercase tracking-wider text-red-400">
-                  Especificaciones Completas
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {[
-                    ['Procesador (CPU)', selectedBuild.specs.cpu],
-                    ['Tarjeta de Video (GPU)', selectedBuild.specs.gpu],
-                    ['Placa Madre', selectedBuild.specs.motherboard],
-                    ['Memoria RAM', selectedBuild.specs.ram],
-                    ['Almacenamiento', selectedBuild.specs.storage],
-                    ['Fuente de Poder', selectedBuild.specs.psu],
-                    ['Gabinete', selectedBuild.specs.case_name],
-                    ['Refrigeración', selectedBuild.specs.cooling],
-                    ...(selectedBuild.specs.os
-                      ? [['Sistema Operativo', selectedBuild.specs.os]]
-                      : []),
-                  ].map(([label, val]) => (
-                    <div
-                      key={label}
-                      className="rounded-xl bg-zinc-900/70 border border-zinc-800/90 px-3.5 py-2.5"
-                    >
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                        {label}
-                      </div>
-                      <div className="text-xs font-semibold text-zinc-100 mt-0.5">
-                        {val || '—'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* FPS Benchmarks */}
-              {selectedBuild.fps_benchmarks &&
-                selectedBuild.fps_benchmarks.length > 0 && (
-                  <div className="space-y-2.5">
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-red-400">
-                      Rendimiento Referencial Estimado
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                      {selectedBuild.fps_benchmarks.map((bm, idx) => (
-                        <div
-                          key={`${bm.game}-${idx}`}
-                          className="rounded-xl bg-zinc-900 border border-zinc-800 p-3 text-center"
-                        >
-                          <div className="text-[11px] font-bold text-zinc-300 truncate">
-                            {bm.game}
-                          </div>
-                          <div className="text-base font-black text-red-400 mt-1">
-                            {bm.fps}
-                          </div>
-                          <div className="text-[10px] text-zinc-500">
-                            {bm.resolution}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* CART & CHECKOUT DRAWER */}
       {isCartOpen && (

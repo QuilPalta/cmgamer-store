@@ -72,7 +72,10 @@ export const SEED_PC_BUILDS: PcBuild[] = [
     reserved_quantity: 0,
     image_url:
       'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=1000&q=80',
-    gallery_urls: [],
+    gallery_urls: [
+      'https://images.unsplash.com/photo-1593640408182-31c70c8268f5?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1624705002806-5d72df19c3ad?auto=format&fit=crop&w=1000&q=80',
+    ],
     short_description:
       'El punto dulce para gaming competitivo en 1080p con DLSS 3, excelente flujo de aire y encendido instantáneo.',
     specs: {

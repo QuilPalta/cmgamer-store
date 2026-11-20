@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   BuildTier,
   ComponentCategory,
@@ -20,16 +21,54 @@ import {
 } from '@/lib/formatters';
 import { useToast } from './ToastProvider';
 import {
+  ArrowLeft,
+  ArrowRight,
   Boxes,
   Cpu,
   Edit3,
+  ExternalLink,
+  ImagePlus,
   Monitor,
   Plus,
   Save,
+  Star,
   Trash2,
+  Upload,
   Wrench,
   X,
 } from 'lucide-react';
+
+async function compressImageFileToDataUrl(
+  file: File,
+  maxWidth = 1280,
+  quality = 0.82
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Imagen inválida.'));
+      img.onload = () => {
+        const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(reader.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 interface AdminInventoryViewProps {
   builds: PcBuild[];
@@ -128,6 +167,86 @@ export function AdminInventoryView({
   const [isBuildModalOpen, setIsBuildModalOpen] = useState(false);
   const [buildForm, setBuildForm] = useState(EMPTY_BUILD_FORM);
   const [isSavingBuild, setIsSavingBuild] = useState(false);
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
+
+  const buildPhotos = useMemo(() => {
+    const list: string[] = [];
+    if (buildForm.image_url?.trim()) list.push(buildForm.image_url.trim());
+    for (const url of buildForm.gallery_urls || []) {
+      const clean = url?.trim();
+      if (clean && !list.includes(clean)) list.push(clean);
+    }
+    return list;
+  }, [buildForm.image_url, buildForm.gallery_urls]);
+
+  function setBuildPhotosList(nextPhotos: string[]) {
+    const cleaned = nextPhotos.map((x) => x.trim()).filter(Boolean);
+    setBuildForm((prev) => ({
+      ...prev,
+      image_url: cleaned[0] || '',
+      gallery_urls: cleaned.slice(1),
+    }));
+  }
+
+  function handleAddPhotoByUrl() {
+    const url = newPhotoUrl.trim();
+    if (!url) return;
+    if (buildPhotos.includes(url)) {
+      showToast('Esa foto ya está agregada a la galería.', { type: 'info' });
+      return;
+    }
+    setBuildPhotosList([...buildPhotos, url]);
+    setNewPhotoUrl('');
+  }
+
+  async function handleUploadPhotos(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setIsProcessingPhotos(true);
+    try {
+      const encoded: string[] = [];
+      for (const file of files) {
+        const dataUrl = await compressImageFileToDataUrl(file);
+        encoded.push(dataUrl);
+      }
+      setBuildPhotosList([...buildPhotos, ...encoded]);
+      showToast(
+        `${encoded.length} foto(s) agregada(s) a la galería`,
+        { type: 'success' }
+      );
+    } catch (err) {
+      showToast('Error al procesar imagen', {
+        description: err instanceof Error ? err.message : '',
+        type: 'error',
+      });
+    } finally {
+      setIsProcessingPhotos(false);
+      e.target.value = '';
+    }
+  }
+
+  function handleSetCoverPhoto(idx: number) {
+    if (idx <= 0 || idx >= buildPhotos.length) return;
+    const copy = [...buildPhotos];
+    const [picked] = copy.splice(idx, 1);
+    copy.unshift(picked);
+    setBuildPhotosList(copy);
+  }
+
+  function handleMovePhoto(idx: number, dir: -1 | 1) {
+    const target = idx + dir;
+    if (target < 0 || target >= buildPhotos.length) return;
+    const copy = [...buildPhotos];
+    const tmp = copy[idx];
+    copy[idx] = copy[target];
+    copy[target] = tmp;
+    setBuildPhotosList(copy);
+  }
+
+  function handleRemovePhoto(idx: number) {
+    setBuildPhotosList(buildPhotos.filter((_, i) => i !== idx));
+  }
 
   // Component Modal
   const [compCatFilter, setCompCatFilter] = useState<ComponentCategory | 'ALL'>(
@@ -425,6 +544,14 @@ export function AdminInventoryView({
                     </div>
 
                     <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/builds/${b.slug}`}
+                        target="_blank"
+                        className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white"
+                        title="Abrir página del PC"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </Link>
                       <button
                         type="button"
                         onClick={() => openEditBuild(b)}
@@ -806,19 +933,136 @@ export function AdminInventoryView({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-zinc-400 mb-1">
-                  URL de Foto Principal
-                </label>
-                <input
-                  type="url"
-                  value={buildForm.image_url}
-                  onChange={(e) =>
-                    setBuildForm({ ...buildForm, image_url: e.target.value })
-                  }
-                  placeholder="https://..."
-                  className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-white"
-                />
+              {/* Incremental Photo Gallery Manager */}
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-red-400 inline-flex items-center gap-1.5">
+                      <ImagePlus className="w-3.5 h-3.5" />
+                      Galería de Fotos ({buildPhotos.length})
+                    </h4>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">
+                      Agrega fotos de a una o varias a la vez. La primera foto
+                      será la portada en el catálogo.
+                    </p>
+                  </div>
+
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold cursor-pointer transition-colors">
+                    <Upload className="w-3.5 h-3.5" />
+                    {isProcessingPhotos
+                      ? 'Procesando...'
+                      : 'Subir Foto(s)'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      disabled={isProcessingPhotos}
+                      onChange={handleUploadPhotos}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {/* Add by URL */}
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={newPhotoUrl}
+                    onChange={(e) => setNewPhotoUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddPhotoByUrl();
+                      }
+                    }}
+                    placeholder="O pega la URL de una foto (https://...) y agrega"
+                    className="flex-1 rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-1.5 text-white placeholder:text-zinc-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddPhotoByUrl}
+                    className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-bold inline-flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Agregar
+                  </button>
+                </div>
+
+                {/* Thumbnails */}
+                {buildPhotos.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-zinc-800 py-5 text-center text-[11px] text-zinc-500">
+                    Aún no hay fotos cargadas para esta build.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {buildPhotos.map((url, idx) => (
+                      <div
+                        key={`${url.slice(0, 32)}-${idx}`}
+                        className={`rounded-xl overflow-hidden border bg-zinc-950 flex flex-col ${
+                          idx === 0
+                            ? 'border-red-500 ring-1 ring-red-500/40'
+                            : 'border-zinc-800'
+                        }`}
+                      >
+                        <div className="relative h-24 bg-zinc-900">
+                          <img
+                            src={url}
+                            alt={`Foto ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          {idx === 0 && (
+                            <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-red-600 text-[9px] font-black uppercase text-white">
+                              Portada
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePhoto(idx)}
+                            className="absolute top-1.5 right-1.5 p-1 rounded-md bg-black/80 hover:bg-red-600 text-white"
+                            title="Quitar foto"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        <div className="p-1.5 flex items-center justify-between gap-1 bg-zinc-950 border-t border-zinc-800">
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => handleMovePhoto(idx, -1)}
+                              className="p-1 rounded bg-zinc-900 hover:bg-zinc-800 disabled:opacity-30 text-zinc-300"
+                              title="Mover a la izquierda"
+                            >
+                              <ArrowLeft className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx === buildPhotos.length - 1}
+                              onClick={() => handleMovePhoto(idx, 1)}
+                              className="p-1 rounded bg-zinc-900 hover:bg-zinc-800 disabled:opacity-30 text-zinc-300"
+                              title="Mover a la derecha"
+                            >
+                              <ArrowRight className="w-3 h-3" />
+                            </button>
+                          </div>
+
+                          {idx > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetCoverPhoto(idx)}
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-zinc-900 hover:bg-red-600/20 text-[10px] font-bold text-zinc-300 hover:text-red-300"
+                              title="Definir como portada"
+                            >
+                              <Star className="w-2.5 h-2.5" />
+                              Portada
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
